@@ -1,0 +1,9 @@
+# 上游 masscan 源码与编译产物
+masscan/
+
+# Python 缓存
+__pycache__/
+*.pyc
+
+# 本地备份（含真实 Cookie，勿提交）
+shodan_pipeline.py.bak
