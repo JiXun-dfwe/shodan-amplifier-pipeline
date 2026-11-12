@@ -233,7 +233,7 @@ def rate_test(ip: str, port: int, duration: float = RATE_TEST_DURATION,
 
 
 class App:
-    def __init__(self, root: tk.Tk):
+    def __init__(self, root):
         self.root = root
         self.proc = None
         self.q = queue.Queue()
