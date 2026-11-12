@@ -1,9 +1,33 @@
-# 上游 masscan 源码与编译产物
-masscan/
-
-# Python 缓存
+# ===== Python =====
 __pycache__/
 *.pyc
+.venv/
+venv/
+env/
 
-# 本地备份（含真实 Cookie，勿提交）
+# ===== Cookie/凭据备份 (真实 Cookie 不入库) =====
 shodan_pipeline.py.bak
+*.py.bak
+*.json.bak
+*.orig
+
+# ===== 运行期临时产物 (每次运行自动重新生成) =====
+_send_il.txt
+_send_counts.csv
+_send_rate.csv
+_masscan_console.log
+ctl.log
+
+# ===== masscan 编译产物 =====
+masscan/bin/*.exe
+masscan/bin/*.bak
+masscan/**/*.o
+masscan/vs10/.vs/
+masscan/vs10/Debug/
+masscan/vs10/Release/
+masscan/vs10/x64/
+# npcap SDK (第三方库, 手动下载放进来, 不入库)
+masscan/vs10/include/
+masscan/vs10/lib/
+# masscan 自身仓库的本地杂项
+masscan/paused.conf

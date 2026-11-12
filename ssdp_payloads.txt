@@ -1,0 +1,7 @@
+# SSDP M-SEARCH probe, byte-identical to the scan_gui.py lab probe
+# (PROBE_PAYLOADS[1900], 92-byte payload) so that the amplification
+# ratios measured in the lab transfer 1:1 to masscan.
+# Wire size: 14 (eth) + 28 (IP+UDP) + 92 (payload) = 134 bytes
+udp
+1900
+"M-SEARCH * HTTP/1.1\r\nHOST: 239.255.255.250:1900\r\nMAN: \"ssdp:discover\"\r\nMX: 1\r\nST: ssdp:all\r\n"

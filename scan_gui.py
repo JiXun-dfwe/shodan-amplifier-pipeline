@@ -13,8 +13,14 @@ import time
 import tkinter as tk
 from tkinter import ttk, messagebox
 
-MASSCAN = os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                       "masscan", "bin", "masscan.exe")
+# ================【可自定义配置 - 环境变量 GUI_*】================
+# GUI_MASSCAN  masscan.exe 路径覆盖; 默认与本脚本同目录的 masscan/bin/masscan.exe
+#                PowerShell 示例:  $env:GUI_MASSCAN="D:\tools\masscan.exe"
+# ==================================================================
+GUI_MASSCAN = os.environ.get("GUI_MASSCAN", "").strip()
+
+MASSCAN = GUI_MASSCAN or os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                                      "masscan", "bin", "masscan.exe")
 
 OPEN_RE = re.compile(r"Discovered open port (\S+)")
 BANNER_RE = re.compile(r"banner: (\S+)")

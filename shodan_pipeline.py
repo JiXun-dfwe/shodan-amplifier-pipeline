@@ -27,36 +27,91 @@ from bs4 import BeautifulSoup
 
 import scan_gui               # 复用 measure_ratio / rate_test / PROBE_PAYLOADS / UDP_HDR
 
-# ================【可自定义配置】================
+# ================【可自定义配置 - 环境变量 SDP_*】================
+# 所有参数可用环境变量覆盖, 均有默认值, 不设置即可直接运行。
+# PowerShell 示例:  $env:SDP_SEARCH_QUERY="port:1900"; $env:SDP_COOKIE="polito=..."
+#
 # ---- Shodan 爬虫 ----
-SEARCH_QUERY = "port:1900"        # 搜索参数, 如 "port:53"、"port:161"、"ssdp"
-MAX_ROUNDS = 0                    # 爬取轮数, 0 = 无限循环 (Ctrl-C 停止)
-POLL_INTERVAL = (60, 120)         # 每轮间隔秒数(下限, 上限); Shodan 1-2 分钟才刷新结果
-PAGE_INTERVAL = (2, 4)            # 同一轮内 page=1 和 page=2 之间的间隔秒数
-TIMEOUT = 5                       # 请求超时(秒)
-# 重要: 搜索过滤器(如 port:1900)需要登录才能用。
-# 浏览器登录 shodan.io -> F12 -> 网络(Network) -> 任选请求 ->
-# 复制请求头 Cookie 的整段值粘贴到下面
-COOKIE = "polito=在这里粘贴你的Shodan登录Cookie"
+# SDP_SEARCH_QUERY    搜索参数, 如 "port:53"、"port:161"、"ssdp"   默认 port:1900
+# SDP_MAX_ROUNDS      爬取轮数, 0 = 无限循环 (Ctrl-C 停止)          默认 0
+# SDP_POLL_INTERVAL   每轮间隔秒数 "下限,上限" (Shodan 1-2 分钟才刷新) 默认 60,120
+# SDP_PAGE_INTERVAL   同一轮内两个 page 之间间隔秒数 "下限,上限"     默认 2,4
+# SDP_TIMEOUT         请求超时秒数                                  默认 5
+# SDP_COOKIE          Shodan 登录 Cookie (必填, 搜索过滤器需要登录)。
+#                     获取: 浏览器登录 shodan.io -> F12 -> 网络 ->
+#                     任选请求 -> 复制请求头 Cookie 整段值           默认 空
+#
+# ---- UDP 测试 ----
+# SDP_PORTS           auto = 自动从 SEARCH_QUERY 提取 port:XXXX; 或手填 "1900,123" 默认 auto
+# SDP_RATE            masscan 每秒发包速率                          默认 1000
+# SDP_RETRIES         masscan 重发次数 (2 = 共发 3 次)              默认 2
+# SDP_WAIT            体积比实测每端口等待响应秒数 (SSDP 建议 4-5)   默认 4.0
+# SDP_MIN_TOTAL_RATIO 保留阈值: 总放大率达到该倍数才保留             默认 15.0
+# SDP_IFACE           本机物理网卡 IP, 留空自动检测 (有 VPN 时手动填) 默认 空
+# SDP_RATE_TEST       1/true = 对有响应的端口测回包吞吐量           默认 1
+# SDP_RATE_TEST_DURATION 吞吐量测试时长秒数                         默认 3.0
+# SDP_RATE_TEST_PPS   吞吐量测试每秒发包数                          默认 50
+#
+# ---- 文件 ----
+# SDP_KEPT_FILE       合格 IP 汇总 (持续累加, 按 best_total_ratio 降序) 默认 shodan_kept.json
+# SDP_CACHE_FILE      已测试 IP 缓存 (防重复测试); 删除后会全部重测   默认 _tested_cache.json
+#
+# ---- 路径 ----
+# SDP_MASSCAN         masscan.exe 路径                              默认 masscan/bin/masscan.exe
+# ==================================================================
+
+def _env(name, default="", cast=str):
+    """读环境变量 SDP_*; 未设置或为空时用默认值"""
+    v = os.environ.get(name)
+    if v is None or v.strip() == "":
+        return default
+    if cast is bool:
+        return v.strip().lower() in ("1", "true", "yes", "on")
+    try:
+        return cast(v)
+    except ValueError:
+        raise SystemExit("[!] 环境变量 %s 格式错误: %r" % (name, v))
+
+
+def _env_pair(name, cast=float):
+    """解析 '下限,上限' 形式的环境变量 -> 元组"""
+    v = os.environ.get(name)
+    if v is None or v.strip() == "":
+        return None
+    parts = [p.strip() for p in v.split(",")]
+    try:
+        nums = [cast(p) for p in parts]
+    except ValueError:
+        raise SystemExit("[!] 环境变量 %s 格式错误: %r (应为 'min,max')" % (name, v))
+    return tuple(nums) if len(nums) == 2 else nums[0]
+
+
+# ---- Shodan 爬虫 ----
+SEARCH_QUERY = _env("SDP_SEARCH_QUERY", "port:1900")
+MAX_ROUNDS = _env("SDP_MAX_ROUNDS", 0, int)
+POLL_INTERVAL = _env_pair("SDP_POLL_INTERVAL") or (60, 120)
+PAGE_INTERVAL = _env_pair("SDP_PAGE_INTERVAL") or (2, 4)
+TIMEOUT = _env("SDP_TIMEOUT", 5, int)
+COOKIE = _env("SDP_COOKIE", "")
 
 # ---- UDP 测试 ----
-PORTS = "auto"                    # auto = 自动从 SEARCH_QUERY 提取 port:XXXX; 也可手填 "1900,123"
-RATE = "1000"                     # masscan 每秒发包速率
-RETRIES = 2                       # masscan 重发次数 (2 = 共发 3 次)
-WAIT = 4.0                        # 体积比实测每端口等待响应秒数 (SSDP 多包设备建议 4-5)
-MIN_TOTAL_RATIO = 15.0            # 保留阈值: 总放大率达到该倍数才保留, 其余直接清洗丢弃
-IFACE = ""                        # 本机物理网卡 IP, 留空自动检测 (有 VPN 检测不到时手动填)
-RATE_TEST = True                  # 对有响应的端口测回包吞吐量
-RATE_TEST_DURATION = 3.0          # 吞吐量测试时长(秒)
-RATE_TEST_PPS = 50                # 吞吐量测试每秒发包数
+PORTS = _env("SDP_PORTS", "auto")
+RATE = _env("SDP_RATE", "1000")
+RETRIES = _env("SDP_RETRIES", 2, int)
+WAIT = _env("SDP_WAIT", 4.0, float)
+MIN_TOTAL_RATIO = _env("SDP_MIN_TOTAL_RATIO", 15.0, float)
+IFACE = _env("SDP_IFACE", "")
+RATE_TEST = _env("SDP_RATE_TEST", True, bool)
+RATE_TEST_DURATION = _env("SDP_RATE_TEST_DURATION", 3.0, float)
+RATE_TEST_PPS = _env("SDP_RATE_TEST_PPS", 50, int)
 
 # ---- 文件 ----
-KEPT_FILE = "shodan_kept.json"    # 合格 IP 汇总 (持续累加, 按 best_total_ratio 降序)
-CACHE_FILE = "_tested_cache.json" # 已测试 IP 缓存 (防重复测试); 删除后会全部重测
-# ================================================
+KEPT_FILE = _env("SDP_KEPT_FILE", "shodan_kept.json")
+CACHE_FILE = _env("SDP_CACHE_FILE", "_tested_cache.json")
+# ==================================================================
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-MASSCAN = os.path.join(HERE, "masscan", "bin", "masscan.exe")
+MASSCAN = _env("SDP_MASSCAN", os.path.join(HERE, "masscan", "bin", "masscan.exe"))
 BASE_URL = "https://www.shodan.io/search?query={query}&page={page}"
 OPEN_RE = re.compile(r"Discovered open port (\S+) on ([\d.]+)")
 
