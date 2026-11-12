@@ -148,7 +148,8 @@ def log(msg):
 # ---------- 网关 MAC 解析 (伪造源 IP 时需要) ----------
 def _run_cmd(cmd, timeout=10):
     try:
-        p = subprocess.run(cmd, capture_output=True, timeout=timeout)
+        p = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                           timeout=timeout)
         return p.stdout.decode("utf-8", errors="replace")
     except (OSError, subprocess.TimeoutExpired):
         return ""

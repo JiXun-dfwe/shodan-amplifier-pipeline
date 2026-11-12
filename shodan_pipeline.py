@@ -185,7 +185,8 @@ def masscan_sweep(ips, ports_arg, rate, retries, iface):
         cmd += ["--interface", iface]
     log("masscan 开始: %d 个 IP × %d 个端口, rate=%s" %
         (len(ips), len(ports_arg.split(",")), rate))
-    r = subprocess.run(cmd, capture_output=True, text=True,
+    r = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                       universal_newlines=True,
                        encoding="utf-8", errors="replace")
     tail = "\n".join((r.stdout or "").splitlines()[-3:])
     log("masscan 输出尾部:\n" + tail)

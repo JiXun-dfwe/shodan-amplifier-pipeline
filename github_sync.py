@@ -76,7 +76,8 @@ def _git(args):
     cmd = ["git", "-c", "user.name=%s" % GIT_NAME,
            "-c", "user.email=%s" % GIT_EMAIL] + args
     try:
-        r = subprocess.run(cmd, cwd=_HERE, capture_output=True, text=True,
+        r = subprocess.run(cmd, cwd=_HERE, stdout=subprocess.PIPE,
+                           stderr=subprocess.PIPE, universal_newlines=True,
                            encoding="utf-8", errors="replace",
                            timeout=TIMEOUT)
         ok = r.returncode == 0
