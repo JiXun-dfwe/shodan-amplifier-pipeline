@@ -28,7 +28,6 @@ import os
 import shutil
 
 import shodan_pipeline as sp
-import github_sync        # 清洗完成后自动把 shodan_kept.json 推送 GitHub
 
 # ================【可自定义配置 - 环境变量 RC_*】================
 # 所有参数可用环境变量覆盖, 均有默认值, 不设置即可直接运行。
@@ -269,7 +268,9 @@ def main():
         prune_dead()
     else:
         full_reclean()
-    github_sync.push("reclean 重清洗完成")
+    # 注意: reclean 不自动推送 GitHub —— 多机同时维护 shodan_kept.json 时,
+    # 本地未拉取最新数据就推送会覆盖服务器新爬到的 IP。
+    # 推送统一由 shodan_pipeline.py 负责 (每 30 轮 / Ctrl-C 停止时)。
 
 
 if __name__ == "__main__":

@@ -144,9 +144,9 @@ python shodan_pipeline.py
 
 自动同步时机：
 
-- **shodan_pipeline.py**：每 `SDP_GIT_PUSH_EVERY`（默认 30）轮爬取后推送；Ctrl-C 停止时推送
-- **reclean.py**：每次清洗（全量/`--filter`/`--dead`）完成后推送
+- **shodan_pipeline.py**：每 `SDP_GIT_PUSH_EVERY`（默认 30）轮爬取后推送；Ctrl-C 停止时推送 —— **推送到 GitHub 统一只由它负责**
 - **send_reflect.py**：加 `--pull` 参数时启动前先拉取最新 `shodan_kept.json`，不加则直接用本地文件
+- **reclean.py**：不自动推送。清洗结果只写本地盘；多机同时维护时，本地未拉取最新数据就推送会覆盖其他机器新爬到的 IP，因此清洗后如需上传请先 `git pull` 确认无覆盖再手动推送
 
 需要推送/拉取的机器配置好凭据即可：在 `.env` 里填 `GS_TOKEN=<GitHub PAT>`（推荐 fine-grained token，只授予该仓库 Contents 读写），或用 `gh auth login` / SSH key。
 
