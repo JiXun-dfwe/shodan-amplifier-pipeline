@@ -10,8 +10,11 @@ import socket
 import subprocess
 import threading
 import time
-import tkinter as tk
-from tkinter import ttk, messagebox
+try:  # tkinter 仅 GUI 需要无头服务器上不可用, 按需导入
+    import tkinter as tk
+    from tkinter import ttk, messagebox
+except ImportError:  # 无 GUI 环境 (Linux 服务器) 只影响 GUI 功能
+    tk = None
 
 # ================【可自定义配置 - 环境变量 GUI_*】================
 # GUI_MASSCAN  masscan.exe 路径覆盖; 默认与本脚本同目录的 masscan/bin/masscan.exe
@@ -489,6 +492,9 @@ class App:
 
 
 if __name__ == "__main__":
+    if tk is None:
+        raise SystemExit("[!] 当前环境没有 tkinter (无 GUI), 无法启动可视化界面; "
+                         "主流水线等脚本不受影响, 可正常运行")
     root = tk.Tk()
     App(root)
     root.mainloop()
