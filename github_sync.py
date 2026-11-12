@@ -60,6 +60,8 @@ def _stamp():
 # GS_TIMEOUT          单条 git 命令超时秒数                            默认 120
 # GS_GIT_NAME         commit 作者名 (机器上没配 git config 时兜底)     默认 shodan-bot
 # GS_GIT_EMAIL        commit 作者邮箱                                  默认 bot@local
+# GS_TOKEN            GitHub PAT 令牌 (https 远端免交互登录用, 新服务器
+#                     部署只需把 .env 带上; 只放 .env/环境变量, 勿提交) 默认 空
 # ================================================================
 
 ENABLED = _env("GS_ENABLED", "1").lower() not in ("0", "false", "no", "off")
@@ -69,6 +71,7 @@ BRANCH = _env("GS_BRANCH", "")
 TIMEOUT = int(_env("GS_TIMEOUT", "120") or 120)
 GIT_NAME = _env("GS_GIT_NAME", "shodan-bot")
 GIT_EMAIL = _env("GS_GIT_EMAIL", "bot@local")
+TOKEN = _env("GS_TOKEN", "")
 
 
 def _git(args):
@@ -100,6 +103,19 @@ def _branch():
     return out.strip() if ok and out.strip() else "main"
 
 
+def _remote():
+    """推送/拉取用的远端标识: 配置了 GS_TOKEN 且是 https 远端时,
+    把 PAT 注入 URL 免交互登录 (https://TOKEN@github.com/...);
+    其余情况用原远端名。"""
+    if not TOKEN:
+        return REMOTE
+    ok, url = _git(["config", "--get", "remote.%s.url" % REMOTE])
+    url = url.strip()
+    if ok and url.startswith("https://") and "@" not in url:
+        return url.replace("https://", "https://%s@" % TOKEN, 1)
+    return REMOTE
+
+
 def push(reason="auto"):
     """提交并推送 SYNC_FILE 的变更。返回 True 表示远端已更新。"""
     if not ENABLED:
@@ -122,7 +138,7 @@ def push(reason="auto"):
     if not ok:
         return False
     # 3. 推送
-    ok, _ = _git(["push", REMOTE, br])
+    ok, _ = _git(["push", _remote(), br])
     if ok:
         log("已推送 %s 到 %s/%s (%s)" % (SYNC_FILE, REMOTE, br, reason))
     return ok
@@ -135,7 +151,7 @@ def pull():
     if not ENABLED:
         return False
     br = _branch()
-    ok, _ = _git(["fetch", REMOTE, br])
+    ok, _ = _git(["fetch", _remote(), br])
     if not ok:
         return False
     ok, out = _git(["merge", "--ff-only", "FETCH_HEAD"])

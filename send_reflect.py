@@ -8,8 +8,10 @@ send-only 模式按指定时长/带宽发包, 实时打印发包流量, 并按�
 放大倍率字段: 记录的 best_total_ratio (与 shodan_pipeline.py 的保留口径一致)
 
 用法: python send_reflect.py [--duration 秒] [--bandwidth Mbps] [--source-ip IP]
-                             [--test]
+                             [--test] [--pull]
       时长/带宽/源 IP 用命令行传参, 不传则用下面的配置默认值
+      加 --pull 时启动前先从 GitHub 拉取最新 shodan_kept.json,
+      不加则直接用本地文件
       伪造源 IP (--source-ip) 时自动从系统 ARP 表解析默认网关 MAC,
       以 --router-mac 传给 masscan 跳过 ARP —— 伪造 IP 不在本网段时,
       网关会因 ARP 源地址校验丢弃 ARP 请求导致 masscan 启动失败
@@ -474,6 +476,8 @@ def parse_args():
                     help="发包源端口 (传给 --adapter-port; 反射回包需命中接收端 NAT 映射时设为映射端口)")
     ap.add_argument("--test", action="store_true",
                     help="测试模式: 不伪造源 IP, 捕获实际反射流量并对比理论值偏差")
+    ap.add_argument("--pull", action="store_true",
+                    help="启动前先从 GitHub 拉取最新 shodan_kept.json; 不加该参数直接用本地文件")
     return ap.parse_args()
 
 
@@ -491,8 +495,9 @@ def main():
         log("[!] 测试模式需要真实发包, 请把配置区 OFFLINE 改为 False 后重跑")
         return
 
-    log("从 GitHub 拉取最新 %s ..." % KEPT_FILE)
-    github_sync.pull()
+    if args.pull:
+        log("从 GitHub 拉取最新 %s ..." % KEPT_FILE)
+        github_sync.pull()
     kept = load_kept(os.path.join(HERE, KEPT_FILE))
     records, avg_ratio = select_targets(kept)
     if not records:

@@ -140,14 +140,15 @@ python shodan_pipeline.py
 | `GS_BRANCH` | 空（当前分支） | 分支名 |
 | `GS_TIMEOUT` | `120` | 单条 git 命令超时（秒） |
 | `GS_GIT_NAME` / `GS_GIT_EMAIL` | `shodan-bot` / `bot@local` | commit 作者（机器未配 git config 时兜底） |
+| `GS_TOKEN` | 空 | GitHub PAT 令牌，https 远端免交互推送/拉取；配置后新服务器部署只需带上 `.env`，无需手动 `git` 登录。敏感信息只放 `.env` |
 
 自动同步时机：
 
 - **shodan_pipeline.py**：每 `SDP_GIT_PUSH_EVERY`（默认 30）轮爬取后推送；Ctrl-C 停止时推送
 - **reclean.py**：每次清洗（全量/`--filter`/`--dead`）完成后推送
-- **send_reflect.py**：启动发包前先 `git pull` 拉取最新 `shodan_kept.json`
+- **send_reflect.py**：加 `--pull` 参数时启动前先拉取最新 `shodan_kept.json`，不加则直接用本地文件
 
-服务器上只拉取不推送时，无需任何凭据（公开仓库）；需要推送的机器要配置好该仓库的 git 凭据（如 `gh auth login` 或 SSH key）。
+需要推送/拉取的机器配置好凭据即可：在 `.env` 里填 `GS_TOKEN=<GitHub PAT>`（推荐 fine-grained token，只授予该仓库 Contents 读写），或用 `gh auth login` / SSH key。
 
 ## 快速开始
 
