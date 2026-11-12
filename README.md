@@ -172,11 +172,11 @@ python send_reflect.py --duration 30 --bandwidth 8 --source-ip 192.168.1.50
 python send_reflect.py --test --duration 15 --bandwidth 0.5
 ```
 
-输出文件（`_` 开头，已 gitignore）：
-- `_send_il.txt` — 发给 masscan 的 IP 列表
-- `_send_counts.csv` — 每个 IP 的发包数
-- `_send_rate.csv` — 每秒速率日志（时间戳、pps、Mbps）
-- `_masscan_console.log` — masscan 控制台输出
+输出文件统一放在 `output/` 目录（gitignore，每次运行自动生成）：
+- `output/send_il.txt` — 发给 masscan 的 IP 列表
+- `output/send_counts.csv` — 每个 IP 的发包数
+- `output/send_rate.csv` — 每秒速率日志（时间戳、pps、Mbps）
+- `output/masscan_console.log` — masscan 控制台输出
 
 ### 4. 可视化扫描 (可选)
 

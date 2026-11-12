@@ -58,13 +58,16 @@ log = sp.log
 
 
 def backup_files():
-    """清洗启动前备份 ip 文件, 每次运行覆盖上一次备份"""
+    """清洗启动前备份 ip 文件到 output/ 目录, 每次运行覆盖上一次备份"""
+    out_dir = os.path.join(sp.HERE, "output")
+    os.makedirs(out_dir, exist_ok=True)
     for fname in (sp.KEPT_FILE, sp.CACHE_FILE):
         src = sp.p(fname)
+        dst = os.path.join(out_dir, fname + ".bak")
         try:
             if os.path.exists(src):
-                shutil.copyfile(src, src + ".bak")
-                log("已备份 %s -> %s.bak" % (fname, fname))
+                shutil.copyfile(src, dst)
+                log("已备份 %s -> output/%s.bak" % (fname, fname))
         except OSError as e:
             log("[!] 备份 %s 失败: %s (继续清洗)" % (fname, e))
 

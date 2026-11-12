@@ -106,11 +106,13 @@ OFFLINE = _env("SR_OFFLINE", False, bool)
 REFLECT_TAIL = _env("SR_REFLECT_TAIL", 10, int)
 
 HERE = os.path.dirname(os.path.abspath(__file__))
+OUT_DIR = os.path.join(HERE, "output")                  # 运行期产物统一放这里
+os.makedirs(OUT_DIR, exist_ok=True)
 MASSCAN = _env("SR_MASSCAN", os.path.join(HERE, "masscan", "bin", "masscan.exe"))
-IL_FILE = os.path.join(HERE, "_send_il.txt")        # 生成的 -iL 文件
-RATE_LOG = os.path.join(HERE, "_send_rate.csv")     # masscan 每秒速率日志
-COUNT_FILE = os.path.join(HERE, "_send_counts.csv") # 每 IP 发包计数
-MASSCAN_LOG = os.path.join(HERE, "_masscan_console.log")  # masscan 控制台输出
+IL_FILE = os.path.join(OUT_DIR, "send_il.txt")          # 生成的 -iL 文件
+RATE_LOG = os.path.join(OUT_DIR, "send_rate.csv")       # masscan 每秒速率日志
+COUNT_FILE = os.path.join(OUT_DIR, "send_counts.csv")   # 每 IP 发包计数
+MASSCAN_LOG = os.path.join(OUT_DIR, "masscan_console.log")  # masscan 控制台输出
 PAYLOADS_FILE = os.path.join(HERE, "ssdp_payloads.txt")   # 与实验室一致的探针载荷
 
 

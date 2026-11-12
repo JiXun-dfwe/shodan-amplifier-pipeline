@@ -12,12 +12,10 @@ shodan_pipeline.py.bak
 *.orig
 .env
 
-# ===== 运行期临时产物 (每次运行自动重新生成) =====
-_send_il.txt
-_send_counts.csv
-_send_rate.csv
-_masscan_console.log
-ctl.log
+# ===== 运行期临时产物 (output/ 目录, 每次运行自动重新生成) =====
+output/
+# masscan Ctrl-C 时自动保存的状态文件
+paused.conf
 
 # ===== masscan 编译产物 =====
 masscan/bin/*.exe
