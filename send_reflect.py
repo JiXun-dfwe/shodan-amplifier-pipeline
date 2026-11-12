@@ -10,6 +10,9 @@ send-only 模式按指定时长/带宽发包, 实时打印发包流量, 并按�
 用法: python send_reflect.py [--duration 秒] [--bandwidth Mbps] [--source-ip IP]
                              [--test]
       时长/带宽/源 IP 用命令行传参, 不传则用下面的配置默认值
+      伪造源 IP (--source-ip) 时自动从系统 ARP 表解析默认网关 MAC,
+      以 --router-mac 传给 masscan 跳过 ARP —— 伪造 IP 不在本网段时,
+      网关会因 ARP 源地址校验丢弃 ARP 请求导致 masscan 启动失败
       实际发包需要管理员权限运行终端 (Npcap 权限); --test 模式还需
       管理员权限创建捕获套接字 (SIO_RCVALL)
 """
@@ -135,6 +138,89 @@ def payload_wire_len():
 
 def log(msg):
     print("[%s] %s" % (time.strftime("%H:%M:%S"), msg), flush=True)
+
+
+# ---------- 网关 MAC 解析 (伪造源 IP 时需要) ----------
+def _run_cmd(cmd, timeout=10):
+    try:
+        p = subprocess.run(cmd, capture_output=True, timeout=timeout)
+        return p.stdout.decode("utf-8", errors="replace")
+    except (OSError, subprocess.TimeoutExpired):
+        return ""
+
+
+def _ping(gw):
+    """ping 一次网关, 让系统 ARP 表填充它的 MAC"""
+    cmd = (["ping", "-n", "1", "-w", "1000", gw] if os.name == "nt"
+           else ["ping", "-c", "1", "-W", "1", gw])
+    _run_cmd(cmd, timeout=5)
+
+
+def get_default_gateway():
+    """读默认网关 IP; 失败返回 None"""
+    if os.name == "nt":
+        out = _run_cmd(["route", "print", "-4", "0.0.0.0"])
+        for ln in out.splitlines():
+            parts = ln.split()
+            # 0.0.0.0  0.0.0.0  <网关>  <接口>  <metric>
+            if (len(parts) >= 3 and parts[0] == "0.0.0.0"
+                    and parts[1] == "0.0.0.0"
+                    and re.match(r"^\d+\.\d+\.\d+\.\d+$", parts[2])
+                    and parts[2] != "On-link"):
+                return parts[2]
+    else:
+        m = re.search(r"\bvia\s+(\d+\.\d+\.\d+\.\d+)",
+                      _run_cmd(["ip", "route", "show", "default"]))
+        if m:
+            return m.group(1)
+    return None
+
+
+def get_arp_mac(gw):
+    """从系统 ARP 表查网关 MAC; 没有则 ping 一次后重查; 失败返回 None"""
+    mac_re = re.compile(r"((?:[0-9a-fA-F]{1,2})[-:]){5}[0-9a-fA-F]{1,2}")
+    for attempt in range(2):
+        if attempt:
+            _ping(gw)
+            time.sleep(0.3)
+        if os.name == "nt":
+            for ln in _run_cmd(["arp", "-a", gw]).splitlines():
+                if gw in ln:
+                    m = mac_re.search(ln)
+                    if m:
+                        return m.group(0).replace("-", ":").lower()
+        else:
+            try:
+                with open("/proc/net/arp") as f:
+                    next(f)
+                    for ln in f:
+                        parts = ln.split()
+                        if len(parts) >= 4 and parts[0] == gw \
+                                and parts[3] != "00:00:00:00:00:00":
+                            return parts[3].lower()
+            except OSError:
+                pass
+            m = re.search(r"lladdr\s+((?:[0-9a-fA-F]{2}:){5}[0-9a-fA-F]{2})",
+                          _run_cmd(["ip", "neigh", "show", gw]))
+            if m:
+                return m.group(1).lower()
+    return None
+
+
+def resolve_router_mac():
+    """伪造源 IP 时: 自动取默认网关 MAC 传给 masscan --router-mac"""
+    gw = get_default_gateway()
+    if not gw:
+        log("[!] 未找到默认网关, 无法自动解析 MAC, masscan 将自行尝试 ARP")
+        return None
+    mac = get_arp_mac(gw)
+    if mac:
+        log("网关 %s MAC: %s (来自系统 ARP 表, 将以 --router-mac 传给 masscan)"
+            % (gw, mac))
+    else:
+        log("[!] 网关 %s 不在 ARP 表中且 ping 不通, 无法自动解析 MAC,"
+            " masscan 将自行尝试 ARP" % gw)
+    return mac
 
 
 # ---------- 提取与筛选 ----------
@@ -459,6 +545,12 @@ def main():
            "--count-file", COUNT_FILE, "--rate-log", RATE_LOG]
     if source_ip:
         cmd += ["--adapter-ip", source_ip]
+        if not OFFLINE:
+            # 伪造 IP 不在本网段 -> 网关会丢 masscan 的 ARP 请求(源地址校验),
+            # 自动从系统 ARP 表取网关 MAC 直接写死, 绕过 ARP
+            rmac = resolve_router_mac()
+            if rmac:
+                cmd += ["--router-mac", rmac]
     if IFACE and not test_mode:
         cmd += ["--interface", IFACE]
     if OFFLINE:
