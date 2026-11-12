@@ -52,15 +52,22 @@ masscan UDP 扫描 (--banners)  ──► 发现开放端口
   - Linux: `cd masscan && make`
 - 以**管理员权限**运行（masscan 需要原始套接字收发包）。
 
-## 配置：环境变量
+## 配置：环境变量 / .env 文件
 
-所有参数通过**环境变量**配置，均有默认值，不设置即可运行。四个脚本的前缀互不混杂：
+所有参数通过**环境变量**配置，均有默认值，不设置即可运行。两个来源，优先级从高到低：
+
+1. **系统环境变量**（PowerShell `$env:XXX`，只对当前终端生效）
+2. **`.env` 文件**（脚本同目录，长期生效，推荐）：复制 `.env.example` 为 `.env` 后填写。
+   `.env` 已被 gitignore，**Cookie 等敏感信息只放这里，不要提交**
+
+四个脚本的前缀互不混杂：
 `SDP_`（主流水线）、`RC_`（重清洗）、`SR_`（反射发包）、`GUI_`（可视化扫描）。
 
 PowerShell 设置示例：
 
 ```powershell
-$env:SDP_COOKIE = "polito=粘贴你的Cookie"   # Cookie 含敏感信息, 只放环境变量, 不要写进源码
+Copy-Item .env.example .env; notepad .env   # 或者直接设环境变量:
+$env:SDP_COOKIE = "polito=粘贴你的Cookie"   # Cookie 含敏感信息, 只放 .env/环境变量, 不要写进源码
 $env:SDP_SEARCH_QUERY = "port:1900"
 $env:SR_DURATION = "30"
 $env:SR_BANDWIDTH = "8"
