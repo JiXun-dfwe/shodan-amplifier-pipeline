@@ -146,7 +146,7 @@ python shodan_pipeline.py
 
 - **shodan_pipeline.py**：每 `SDP_GIT_PUSH_EVERY`（默认 30）轮爬取后推送；Ctrl-C 停止时推送 —— **推送到 GitHub 统一只由它负责**
 - **send_reflect.py**：加 `--pull` 参数时启动前先拉取最新 `shodan_kept.json`，不加则直接用本地文件
-- **reclean.py**：不自动推送。清洗结果只写本地盘；多机同时维护时，本地未拉取最新数据就推送会覆盖其他机器新爬到的 IP，因此清洗后如需上传请先 `git pull` 确认无覆盖再手动推送
+- **reclean.py**：不自动推送。加 `--pull` 可在清洗前先拉取最新数据；清洗结果只写本地盘，如需上传请先 `git pull` 确认无覆盖再手动推送
 
 需要推送/拉取的机器配置好凭据即可：在 `.env` 里填 `GS_TOKEN=<GitHub PAT>`（推荐 fine-grained token，只授予该仓库 Contents 读写），或用 `gh auth login` / SSH key。
 
@@ -169,7 +169,8 @@ IP 会失效（重启、修复漏洞、下线），定期重清洗可以让列�
 # 全量重测 (默认): 对每个 IP 重新实测
 #   仍达标   -> 更新记录 (新的体积比/吞吐量)
 #   不达标   -> 清除出 kept.json, 并从缓存移除 (之后 Shodan 再爬到会重新测试)
-python reclean.py
+python reclean.py            # 本地多机维护时建议加 --pull 先拉最新数据
+python reclean.py --pull     # 清洗前先从 GitHub 拉取最新 shodan_kept.json
 
 # 轻量清洗 (不发任何包): 只按已记录的总放大率过滤, 秒级完成
 #   发现不了"记录达标但实际已失效"的 IP

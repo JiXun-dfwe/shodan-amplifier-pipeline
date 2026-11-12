@@ -18,6 +18,7 @@
 命令行参数:
   --filter [倍数]   轻量清洗模式; 倍数省略时用 shodan_pipeline.py 的 MIN_TOTAL_RATIO
   --dead            无响应清洗模式; 只探测回包, 不测放大倍率
+  --pull            清洗前先从 GitHub 拉取最新 shodan_kept.json
 
 注意: 全量重测模式运行前请勿同时运行 shodan_pipeline.py (会抢 masscan 临时文件)
 每次清洗启动时会先把 shodan_kept.json / _tested_cache.json 备份为 *.bak
@@ -28,6 +29,7 @@ import os
 import shutil
 
 import shodan_pipeline as sp
+import github_sync        # --pull 拉取最新数据 (清洗不自动推送, 推送由流水线负责)
 
 # ================【可自定义配置 - 环境变量 RC_*】================
 # 所有参数可用环境变量覆盖, 均有默认值, 不设置即可直接运行。
@@ -260,7 +262,12 @@ def main():
     ap.add_argument("--dead", action="store_true",
                     help="无响应清洗: masscan 探测回包, 无回包的 IP 直接清除, "
                          "不测放大倍率")
+    ap.add_argument("--pull", action="store_true",
+                    help="清洗前先从 GitHub 拉取最新 shodan_kept.json; "
+                         "多机同时维护时避免用旧数据清洗")
     args = ap.parse_args()
+    if args.pull:
+        github_sync.pull()
     backup_files()
     if args.filter is not None:
         light_filter(args.filter if args.filter > 0 else sp.MIN_TOTAL_RATIO)
