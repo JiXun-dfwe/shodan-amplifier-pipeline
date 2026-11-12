@@ -26,6 +26,7 @@ import requests
 from bs4 import BeautifulSoup
 
 import scan_gui               # 复用 measure_ratio / rate_test / PROBE_PAYLOADS / UDP_HDR
+# ^ import 时已加载本目录 .env 配置文件 (系统环境变量优先级更高)
 
 # ================【可自定义配置 - 环境变量 SDP_*】================
 # 所有参数可用环境变量覆盖, 均有默认值, 不设置即可直接运行。

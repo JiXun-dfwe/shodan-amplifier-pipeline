@@ -5,11 +5,12 @@ __pycache__/
 venv/
 env/
 
-# ===== Cookie/凭据备份 (真实 Cookie 不入库) =====
+# ===== Cookie/凭据 (真实 Cookie 不入库) =====
 shodan_pipeline.py.bak
 *.py.bak
 *.json.bak
 *.orig
+.env
 
 # ===== 运行期临时产物 (每次运行自动重新生成) =====
 _send_il.txt

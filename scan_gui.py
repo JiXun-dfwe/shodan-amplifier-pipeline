@@ -17,10 +17,34 @@ from tkinter import ttk, messagebox
 # GUI_MASSCAN  masscan.exe 路径覆盖; 默认与本脚本同目录的 masscan/bin/masscan.exe
 #                PowerShell 示例:  $env:GUI_MASSCAN="D:\tools\masscan.exe"
 # ==================================================================
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+
+
+def load_env_file(filename=".env"):
+    """加载本目录下 .env 配置文件 (KEY=VALUE 每行一条, # 开头为注释)。
+    只在变量尚未存在于系统环境时设置 -> 系统环境变量优先级更高。
+    在任何脚本读取配置前调用一次。"""
+    path = os.path.join(HERE, filename)
+    try:
+        with open(path, encoding="utf-8-sig") as f:
+            for line in f:
+                line = line.strip()
+                if not line or line.startswith("#") or "=" not in line:
+                    continue
+                k, _, v = line.partition("=")
+                k, v = k.strip(), v.strip()
+                if k and k not in os.environ:
+                    os.environ[k] = v
+    except OSError:
+        pass
+
+
+load_env_file()
+
 GUI_MASSCAN = os.environ.get("GUI_MASSCAN", "").strip()
 
-MASSCAN = GUI_MASSCAN or os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                                      "masscan", "bin", "masscan.exe")
+MASSCAN = GUI_MASSCAN or os.path.join(HERE, "masscan", "bin", "masscan.exe")
 
 OPEN_RE = re.compile(r"Discovered open port (\S+)")
 BANNER_RE = re.compile(r"banner: (\S+)")

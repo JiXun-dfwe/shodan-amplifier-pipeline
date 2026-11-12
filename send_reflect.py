@@ -26,7 +26,9 @@ import time
 
 # ================【可自定义配置 - 环境变量 SR_*】================
 # 所有参数可用环境变量覆盖, 均有默认值, 不设置即可直接运行。
-# PowerShell 示例:  $env:SR_DURATION="30"; $env:SR_BANDWIDTH="8"
+# 环境变量来源二选一 (系统环境变量优先级更高):
+#   1. 同目录 .env 文件: KEY=VALUE 每行一条, # 开头为注释 (推荐, 参见 .env.example)
+#   2. PowerShell:  $env:SR_DURATION="30"; $env:SR_BANDWIDTH="8"
 #
 # SR_KEPT_FILE      合格 IP 汇总文件 (shodan_pipeline.py 产出)   默认 shodan_kept.json
 # SR_RATIO_RANGE    放大倍率筛选区间, 作用于 best_total_ratio:
@@ -42,6 +44,29 @@ import time
 # SR_REFLECT_TAIL   测试模式收尾秒数 (发包停后继续抓反射)          默认 10
 # SR_MASSCAN        masscan.exe 路径                              默认 masscan/bin/masscan.exe
 # ================================================================
+
+_HERE = os.path.dirname(os.path.abspath(__file__))
+
+
+def _load_env_file(filename=".env"):
+    """加载本目录 .env 配置文件 (KEY=VALUE 每行一条, # 为注释)。
+    只在变量尚未存在于系统环境时设置 -> 系统环境变量优先级更高。"""
+    try:
+        with open(os.path.join(_HERE, filename), encoding="utf-8-sig") as f:
+            for line in f:
+                line = line.strip()
+                if not line or line.startswith("#") or "=" not in line:
+                    continue
+                k, _, v = line.partition("=")
+                k, v = k.strip(), v.strip()
+                if k and k not in os.environ:
+                    os.environ[k] = v
+    except OSError:
+        pass
+
+
+_load_env_file()
+
 
 def _env(name, default="", cast=str):
     """读环境变量 SR_*; 未设置或为空时用默认值"""
