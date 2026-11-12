@@ -27,6 +27,7 @@ from bs4 import BeautifulSoup
 
 import scan_gui               # 复用 measure_ratio / rate_test / PROBE_PAYLOADS / UDP_HDR
 # ^ import 时已加载本目录 .env 配置文件 (系统环境变量优先级更高)
+import github_sync            # 每 N 轮 / Ctrl-C 停止时自动推送 shodan_kept.json 到 GitHub
 
 # ================【可自定义配置 - 环境变量 SDP_*】================
 # 所有参数可用环境变量覆盖, 均有默认值, 不设置即可直接运行。
@@ -58,7 +59,12 @@ import scan_gui               # 复用 measure_ratio / rate_test / PROBE_PAYLOAD
 # SDP_CACHE_FILE      已测试 IP 缓存 (防重复测试); 删除后会全部重测   默认 _tested_cache.json
 #
 # ---- 路径 ----
-# SDP_MASSCAN         masscan.exe 路径                              默认 masscan/bin/masscan.exe
+# SDP_MASSCAN         masscan 可执行文件路径                        默认 masscan/bin/masscan.exe (Windows)
+#                                                                       或 masscan/bin/masscan (Linux)
+#
+# ---- GitHub 自动同步 ----
+# SDP_GIT_PUSH_EVERY  每 N 轮爬取后自动推送 shodan_kept.json 到      默认 30
+#                     GitHub (0 = 关闭); Ctrl-C 停止时总会推送一次
 # ==================================================================
 
 def _env(name, default="", cast=str):
@@ -112,7 +118,9 @@ CACHE_FILE = _env("SDP_CACHE_FILE", "_tested_cache.json")
 # ==================================================================
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-MASSCAN = _env("SDP_MASSCAN", os.path.join(HERE, "masscan", "bin", "masscan.exe"))
+MASSCAN = _env("SDP_MASSCAN", os.path.join(HERE, "masscan", "bin",
+             "masscan.exe" if os.name == "nt" else "masscan"))
+GIT_PUSH_EVERY = _env("SDP_GIT_PUSH_EVERY", 30, int)
 BASE_URL = "https://www.shodan.io/search?query={query}&page={page}"
 OPEN_RE = re.compile(r"Discovered open port (\S+) on ([\d.]+)")
 
@@ -444,6 +452,9 @@ def main():
                 % (rnd, len(set(round_ips)), len(new)))
             if new:
                 test_ips(new, ports, iface, kept, cache)
+            if GIT_PUSH_EVERY and rnd % GIT_PUSH_EVERY == 0:
+                log("已达 %d 轮, 推送 shodan_kept.json 到 GitHub..." % rnd)
+                github_sync.push("爬虫第 %d 轮" % rnd)
             if MAX_ROUNDS and rnd >= MAX_ROUNDS:
                 break
             wait = random.uniform(*POLL_INTERVAL)
@@ -453,6 +464,7 @@ def main():
         log("已手动停止, 数据已保存")
     save_kept(kept, p(KEPT_FILE))
     save_cache(cache, p(CACHE_FILE))
+    github_sync.push("爬虫手动停止")
     log("完成! 共保留 %d 个合格 IP -> %s" % (len(kept), KEPT_FILE))
 
 

@@ -27,6 +27,8 @@ import sys
 import threading
 import time
 
+import github_sync  # 启动前自动 git pull 更新 shodan_kept.json
+
 # ================【可自定义配置 - 环境变量 SR_*】================
 # 所有参数可用环境变量覆盖, 均有默认值, 不设置即可直接运行。
 # 环境变量来源二选一 (系统环境变量优先级更高):
@@ -488,6 +490,8 @@ def main():
         log("[!] 测试模式需要真实发包, 请把配置区 OFFLINE 改为 False 后重跑")
         return
 
+    log("从 GitHub 拉取最新 %s ..." % KEPT_FILE)
+    github_sync.pull()
     kept = load_kept(os.path.join(HERE, KEPT_FILE))
     records, avg_ratio = select_targets(kept)
     if not records:

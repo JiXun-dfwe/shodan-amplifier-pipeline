@@ -32,6 +32,7 @@ masscan UDP 扫描 (--banners)  ──► 发现开放端口
 ├── reclean.py           # 重清洗工具: 清理失效/不达标 IP
 ├── send_reflect.py      # send-only 反射发包工具: 指定时长/带宽发探测包, 测试模式可校准实际反射流量
 ├── scan_gui.py          # masscan 可视化扫描工具 (tkinter GUI)
+├── github_sync.py       # shodan_kept.json 自动同步 GitHub (三脚本共用)
 ├── ssdp_payloads.txt    # SSDP 探针载荷 (与实测放大率用的探针逐字节一致, 供 send_reflect.py 加载)
 ├── shodan_kept.json     # 合格 IP 汇总 (按 best_total_ratio 降序)
 ├── _tested_cache.json   # 已测试 IP 缓存 (防重复测试)
@@ -40,7 +41,7 @@ masscan UDP 扫描 (--banners)  ──► 发现开放端口
 
 ## 环境要求
 
-- **Windows**（masscan.exe 路径默认按 Windows 写死，其他平台需自行修改）
+- **Windows / Linux** 均可运行（masscan 路径默认按平台自动选择 `masscan/bin/masscan.exe` 或 `masscan/bin/masscan`，也可用 `SDP_MASSCAN` 覆盖）。
 - **Python 3.8+**，依赖：
 
   ```bash
@@ -61,7 +62,7 @@ masscan UDP 扫描 (--banners)  ──► 发现开放端口
    `.env` 已被 gitignore，**Cookie 等敏感信息只放这里，不要提交**
 
 四个脚本的前缀互不混杂：
-`SDP_`（主流水线）、`RC_`（重清洗）、`SR_`（反射发包）、`GUI_`（可视化扫描）。
+`SDP_`（主流水线）、`RC_`（重清洗）、`SR_`（反射发包）、`GUI_`（可视化扫描）、`GS_`（GitHub 自动同步，三脚本共用）。
 
 PowerShell 设置示例：
 
@@ -95,7 +96,8 @@ python shodan_pipeline.py
 | `SDP_TIMEOUT` | `5` | HTTP 请求超时（秒） |
 | `SDP_KEPT_FILE` | `shodan_kept.json` | 合格 IP 汇总文件 |
 | `SDP_CACHE_FILE` | `_tested_cache.json` | 已测试 IP 缓存文件 |
-| `SDP_MASSCAN` | 自动 | masscan.exe 路径覆盖 |
+| `SDP_MASSCAN` | 自动 | masscan 路径覆盖（Windows: `masscan/bin/masscan.exe`，Linux: `masscan/bin/masscan`） |
+| `SDP_GIT_PUSH_EVERY` | `30` | 每 N 轮爬取后自动把 `shodan_kept.json` 推送到 GitHub（`0` 关闭）；Ctrl-C 停止时总会推送一次 |
 
 ### reclean.py — 前缀 `RC_`
 
@@ -125,6 +127,27 @@ python shodan_pipeline.py
 | 环境变量 | 默认值 | 说明 |
 |---|---|---|
 | `GUI_MASSCAN` | 自动 | masscan.exe 路径覆盖 |
+
+### github_sync.py — 前缀 `GS_`（三脚本共用）
+
+`shodan_kept.json` 的 GitHub 自动同步模块，所有失败只打日志不中断主流程：
+
+| 环境变量 | 默认值 | 说明 |
+|---|---|---|
+| `GS_ENABLED` | `1` | `1` 启用自动同步；`0` 禁用（只打日志）。服务器上没有 git 推送凭据时可设 `0` |
+| `GS_SYNC_FILE` | `shodan_kept.json` | 要同步的数据文件 |
+| `GS_REMOTE` | `origin` | git 远端名 |
+| `GS_BRANCH` | 空（当前分支） | 分支名 |
+| `GS_TIMEOUT` | `120` | 单条 git 命令超时（秒） |
+| `GS_GIT_NAME` / `GS_GIT_EMAIL` | `shodan-bot` / `bot@local` | commit 作者（机器未配 git config 时兜底） |
+
+自动同步时机：
+
+- **shodan_pipeline.py**：每 `SDP_GIT_PUSH_EVERY`（默认 30）轮爬取后推送；Ctrl-C 停止时推送
+- **reclean.py**：每次清洗（全量/`--filter`/`--dead`）完成后推送
+- **send_reflect.py**：启动发包前先 `git pull` 拉取最新 `shodan_kept.json`
+
+服务器上只拉取不推送时，无需任何凭据（公开仓库）；需要推送的机器要配置好该仓库的 git 凭据（如 `gh auth login` 或 SSH key）。
 
 ## 快速开始
 
