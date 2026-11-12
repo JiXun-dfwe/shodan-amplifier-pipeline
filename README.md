@@ -112,6 +112,7 @@ python shodan_pipeline.py
 | `SR_BANDWIDTH` | `8.0` | 发包流量目标 Mbps，masscan 按实测包长自动换算 pps（`--bandwidth` 可覆盖） |
 | `SR_RATIO_RANGE` | `15,20` | 放大倍率筛选区间：`50` = ≥50；`15,20` = 闭区间；`50,` = ≥50 |
 | `SR_SOURCE_IP` | 空 | 伪造源 IP（`--source-ip` 可覆盖），留空用本机网卡 |
+| `SR_SOURCE_PORT` | 空 | 源端口（`--source-port` 可覆盖）；反射回包需命中接收端 NAT 映射时设为映射端口 |
 | `SR_PORTS` | `auto` | 自动从选中记录汇总端口，或手填 `"1900,123"` |
 | `SR_IFACE` | 空 | 本机网卡 IP，留空让 masscan 自动选择 |
 | `SR_OFFLINE` | `0` | `1` = 只走流程不真发包（流程测试用） |

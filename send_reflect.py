@@ -41,6 +41,8 @@ import time
 # SR_DURATION       默认发包持续秒数 (命令行 --duration 可覆盖)  默认 30
 # SR_BANDWIDTH      默认发包流量目标 Mbps (--bandwidth 可覆盖)   默认 8.0
 # SR_SOURCE_IP      默认源 IP (--source-ip 可覆盖; 传给 --adapter-ip) 默认 空=本机网卡
+# SR_SOURCE_PORT    源端口 (传给 --adapter-port); 反射回包需命中接收端
+#                     NAT 映射时设为映射端口, 如 5000            默认 空=masscan 默认
 # SR_PORTS          auto = 从选中记录自动汇总端口; 或手填 "1900,123"  默认 auto
 # SR_IFACE          本机网卡 IP, 留空让 masscan 自动选择          默认 空
 # SR_OFFLINE        1/true = 只走完整流程不真发包 (测试用)        默认 0
@@ -103,6 +105,7 @@ RATIO_RANGE = _env_range("SR_RATIO_RANGE")
 DURATION = _env("SR_DURATION", 30, float)
 BANDWIDTH = _env("SR_BANDWIDTH", 8.0, float)
 SOURCE_IP = _env("SR_SOURCE_IP", "")
+SOURCE_PORT = _env("SR_SOURCE_PORT", "")
 PORTS = _env("SR_PORTS", "auto")
 IFACE = _env("SR_IFACE", "")
 OFFLINE = _env("SR_OFFLINE", False, bool)
@@ -464,6 +467,8 @@ def parse_args():
                     help="发包流量目标 Mbps (默认: %(default)s)")
     ap.add_argument("--source-ip", default=SOURCE_IP,
                     help="发包源 IP (传给 masscan --adapter-ip; 默认: 自动使用网卡 IP)")
+    ap.add_argument("--source-port", default=SOURCE_PORT,
+                    help="发包源端口 (传给 --adapter-port; 反射回包需命中接收端 NAT 映射时设为映射端口)")
     ap.add_argument("--test", action="store_true",
                     help="测试模式: 不伪造源 IP, 捕获实际反射流量并对比理论值偏差")
     return ap.parse_args()
@@ -474,6 +479,7 @@ def main():
     duration = args.duration
     bandwidth = args.bandwidth
     source_ip = str(args.source_ip).strip()
+    source_port = str(args.source_port).strip()
     test_mode = args.test
     if test_mode and source_ip:
         log("[!] 测试模式下不伪造源 IP, 忽略 --source-ip = %s" % source_ip)
@@ -551,6 +557,8 @@ def main():
             rmac = resolve_router_mac()
             if rmac:
                 cmd += ["--router-mac", rmac]
+    if source_port:
+        cmd += ["--adapter-port", source_port]
     if IFACE and not test_mode:
         cmd += ["--interface", IFACE]
     if OFFLINE:
