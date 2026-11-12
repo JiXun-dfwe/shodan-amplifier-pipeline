@@ -109,8 +109,8 @@ def push(reason="auto"):
         log("%s 不存在, 跳过推送" % SYNC_FILE)
         return False
     br = _branch()
-    # 1. 先拉远端 (autostash 防本地未提交改动冲突), 减少推送冲突
-    _git(["pull", "--rebase", "--autostash", REMOTE, br])
+    # 1. 先同步远端, 减少推送冲突
+    pull()
     # 2. 无变化则跳过 commit
     ok, out = _git(["status", "--porcelain", "--", SYNC_FILE])
     if not ok or not out.strip():
@@ -129,11 +129,20 @@ def push(reason="auto"):
 
 
 def pull():
-    """拉取远端最新数据。返回 True 表示 git 拉取成功。"""
+    """拉取远端最新数据。返回 True 表示 git 拉取成功。
+    兼容旧版 git (CentOS 7 自带 1.8.3 无 --autostash):
+    fetch + merge --ff-only, 不做自动 stash。"""
     if not ENABLED:
         return False
     br = _branch()
-    ok, _ = _git(["pull", "--rebase", "--autostash", REMOTE, br])
+    ok, _ = _git(["fetch", REMOTE, br])
+    if not ok:
+        return False
+    ok, out = _git(["merge", "--ff-only", "FETCH_HEAD"])
     if ok:
-        log("已拉取远端最新 %s (%s/%s)" % (SYNC_FILE, REMOTE, br))
+        log("已同步远端最新 %s (%s/%s)" % (SYNC_FILE, REMOTE, br))
+    elif "up to date" in out.lower() or "already up-to-date" in out.lower():
+        ok = True
+    else:
+        log("远端分叉/有本地改动, 跳过 ff 合并: %s" % out[-200:])
     return ok
