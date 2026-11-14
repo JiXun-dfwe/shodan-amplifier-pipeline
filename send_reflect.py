@@ -28,6 +28,7 @@ import subprocess
 import sys
 import threading
 import time
+import unicodedata
 
 import github_sync  # 启动前自动 git pull 更新 shodan_kept.json
 
@@ -145,6 +146,18 @@ def payload_wire_len():
 
 def log(msg):
     print("[%s] %s" % (time.strftime("%H:%M:%S"), msg), flush=True)
+
+
+def _disp_w(s):
+    """终端显示宽度: CJK/全角字符占 2 列"""
+    return sum(2 if unicodedata.east_asian_width(c) in "WF" else 1 for c in s)
+
+
+def _status_line(s, width=78):
+    """单行刷新行: \\r 回行首并补空格到固定显示宽度。
+    Linux SSH 终端默认 80 列, 状态行超宽会折行变成逐行输出 (Windows 120 列无感),
+    因此文本压缩到 78 列内并按显示宽度(中文算2列)补空格清除残留。"""
+    return "\r%s%s" % (s, " " * max(width - _disp_w(s), 1))
 
 
 # ---------- 网关 MAC 解析 (伪造源 IP 时需要) ----------
@@ -398,16 +411,16 @@ def monitor(rate_log, proc, avg_ratio, stop, capture=None, req_bytes=0):
             if capture is not None:
                 actual = capture.snapshot_mbps()
                 dev = ((actual - theory) / theory * 100) if theory else 0
-                sys.stdout.write(
-                    "\r实时: 已发 %5.1fs | 发送 %6.2f Mbps | 反射实测 %8.2f | "
-                    "理论 %8.2f Mbps (x%.1f) | 偏差 %+6.1f%%   "
-                    % (r["elapsed"], r["mbps"], actual, theory, avg_ratio, dev))
+                sys.stdout.write(_status_line(
+                    "%5.1fs | %6.2f Mbps | 反射实测 %7.2f | "
+                    "理论 %7.2f x%.1f | 偏差 %+6.1f%%"
+                    % (r["elapsed"], r["mbps"], actual, theory, avg_ratio, dev)))
             else:
-                sys.stdout.write(
-                    "\r实时: 已发 %5.1fs | 发送 %7.2f Mbps (%8.0f pps) | "
-                    "预估反射 %9.1f Mbps (x%.1f) | 共 %d 包   "
+                sys.stdout.write(_status_line(
+                    "%5.1fs | %6.2f Mbps | %8.0f pps | "
+                    "预估反射 %7.1f Mbps x%.1f | %d 包"
                     % (r["elapsed"], r["mbps"], r["pps"], theory, avg_ratio,
-                       r["packets"]))
+                       r["packets"])))
             sys.stdout.flush()
         if proc.poll() is not None:
             break

@@ -137,14 +137,14 @@ def prune_dead():
         % (len(kept), iface or "自动"))
 
     alive = set()
+    group_stats = []            # (该组有回包数, 无回包数), 尾部统一输出
     for ports, ips in sorted(group_by_ports(kept).items()):
         ports_arg = ",".join(str(x) for x in ports)
         log("--- 探测 %d 个 IP (端口 %s) ---" % (len(ips), ports_arg))
         opens = sp.masscan_sweep(ips, ports_arg, sp.RATE, sp.RETRIES,
                                  sp.IFACE or None)
         alive |= {ip for ip, _port in opens}
-        log("该组: 有回包 %d, 无回包 %d"
-            % (len(alive & set(ips)), len(set(ips) - alive)))
+        group_stats.append((len(alive & set(ips)), len(set(ips) - alive)))
     if mass_dead_guard({rec["ip"] for rec in kept}, alive):
         return
 
@@ -157,10 +157,13 @@ def prune_dead():
             cache.discard(rec["ip"])  # 从缓存移除, Shodan 再爬到会重新测试
     sp.save_kept(kept_out, sp.p(sp.KEPT_FILE))
     sp.save_cache(cache, sp.p(sp.CACHE_FILE))
-    log("无响应清洗完成: 保留 %d, 清除 %d, 已写盘"
-        % (len(kept_out), len(removed)))
+    # 先列出被清洗的 IP, 尾部再输出统计摘要 (避免列表淹没尾部统计)
     for ip in sorted(removed):
         log("  [-] %s 清洗 (无响应, 从缓存移除, Shodan 再爬到会重新测试)" % ip)
+    for n_alive, n_dead in group_stats:
+        log("该组: 有回包 %d, 无回包 %d" % (n_alive, n_dead))
+    log("无响应清洗完成: 保留 %d, 清除 %d, 已写盘"
+        % (len(kept_out), len(removed)))
 
 
 def full_reclean():
