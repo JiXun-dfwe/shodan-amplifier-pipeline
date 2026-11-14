@@ -471,10 +471,13 @@ def summarize(rate_log, count_file, avg_ratio):
 
 # ---------- 主流程 ----------
 def is_admin():
-    try:
-        return bool(ctypes.windll.shell32.IsUserAnAdmin())
-    except Exception:
-        return False
+    """Windows: 检查管理员组; Linux: root (uid 0) 即可 raw socket 发包"""
+    if os.name == "nt":
+        try:
+            return bool(ctypes.windll.shell32.IsUserAnAdmin())
+        except Exception:
+            return False
+    return os.geteuid() == 0
 
 
 def parse_args():
