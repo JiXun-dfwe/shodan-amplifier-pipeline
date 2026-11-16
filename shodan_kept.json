@@ -40368,6 +40368,38 @@
     ]
   },
   {
+    "ip": "119.2.115.93",
+    "best_total_ratio": 22.45,
+    "ports": [
+      {
+        "port": 1900,
+        "req_bytes": 120,
+        "packets": 8,
+        "sizes": [
+          272,
+          272,
+          281,
+          281,
+          336,
+          336,
+          346,
+          346
+        ],
+        "single_max_bytes": 374,
+        "single_ratio": 3.12,
+        "total_bytes": 2694,
+        "total_ratio": 22.45,
+        "rate_test": {
+          "sent_requests": 116,
+          "resp_packets": 54,
+          "resp_bytes": 17642,
+          "resp_pps": 18.0,
+          "resp_bytes_per_sec": 5880
+        }
+      }
+    ]
+  },
+  {
     "ip": "46.46.107.198",
     "best_total_ratio": 22.37,
     "ports": [
@@ -46091,6 +46123,38 @@
           "resp_bytes": 14250,
           "resp_pps": 15.3,
           "resp_bytes_per_sec": 4750
+        }
+      }
+    ]
+  },
+  {
+    "ip": "175.145.159.90",
+    "best_total_ratio": 20.82,
+    "ports": [
+      {
+        "port": 1900,
+        "req_bytes": 120,
+        "packets": 8,
+        "sizes": [
+          227,
+          299,
+          295,
+          275,
+          307,
+          289,
+          291,
+          291
+        ],
+        "single_max_bytes": 335,
+        "single_ratio": 2.79,
+        "total_bytes": 2498,
+        "total_ratio": 20.82,
+        "rate_test": {
+          "sent_requests": 118,
+          "resp_packets": 53,
+          "resp_bytes": 16413,
+          "resp_pps": 17.7,
+          "resp_bytes_per_sec": 5471
         }
       }
     ]
